@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.*;
 import labshopmonolith.MonolithApplication;
+import labshopmonolith.domain.OrderPlaced;
 import lombok.Data;
 
 @Entity
@@ -22,6 +23,21 @@ public class Order {
     private String customerId;
 
     private Double amount;
+
+    @PostPersist
+    public void onPostPersist() {
+        //Following code causes dependency to external APIs
+        // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
+
+        labshopmonolith.external.DecreaseStockCommand decreaseStockCommand = new labshopmonolith.external.DecreaseStockCommand();
+        // mappings goes here
+        MonolithApplication.applicationContext
+            .getBean(labshopmonolith.external.InventoryService.class)
+            .decreaseStock(/* get???(), */decreaseStockCommand);
+
+        OrderPlaced orderPlaced = new OrderPlaced(this);
+        orderPlaced.publishAfterCommit();
+    }
 
     @PrePersist
     public void onPrePersist() {}
